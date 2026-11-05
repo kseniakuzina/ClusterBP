@@ -1,0 +1,15 @@
+windows subset,windows,share with a new antihypertensive prescription in 14 days,share with a new prescription in 30 days,table,history,therapy,B event rate,A event rate
+B event in 14 days before cutoff,69771,0.0008026257327542962,0.0017485774892147168,reverse causality,,,,
+no B events in 14 days,350584,0.00032517171348378705,0.000887091253451384,reverse causality,,,,
+,194811,,,event rate by therapy,no B events in 14 days,no therapy records,0.042266607121774435,0.013736390655558465
+,3457,,,event rate by therapy,no B events in 14 days,0 antihypertensive classes,0.05409314434480764,0.019380966155626265
+,66906,,,event rate by therapy,no B events in 14 days,1 class,0.040848354407676445,0.01416913281320061
+,48567,,,event rate by therapy,no B events in 14 days,2 classes,0.040727242778017994,0.012477608252517142
+,36843,,,event rate by therapy,no B events in 14 days,≥ 3 classes,0.04540889721249627,0.021469478598376897
+,311,,,event rate by therapy,no B events in 14 days,new antihypertensive prescription in 30 days,0.04501607717041801,0.028938906752411574
+,39960,,,event rate by therapy,B events in 14 days,no therapy records,0.5348848848848848,0.1585085085085085
+,836,,,event rate by therapy,B events in 14 days,0 antihypertensive classes,0.4880382775119617,0.1303827751196172
+,13116,,,event rate by therapy,B events in 14 days,1 class,0.5191369319914608,0.15240927111924368
+,8350,,,event rate by therapy,B events in 14 days,2 classes,0.48634730538922155,0.12335329341317365
+,7509,,,event rate by therapy,B events in 14 days,≥ 3 classes,0.5059262218670928,0.18164868824077773
+,122,,,event rate by therapy,B events in 14 days,new antihypertensive prescription in 30 days,0.5,0.2459016393442623

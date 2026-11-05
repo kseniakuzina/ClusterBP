@@ -1,0 +1,5 @@
+,median,Q1,Q3
+measurements per patient,360.0,153.0,715.0
+"follow-up, days",160.4929282407429,86.0794560185168,252.00687499999913
+windows per patient,39.0,16.0,67.0
+measurements per window (14 days),39.0,21.0,69.0

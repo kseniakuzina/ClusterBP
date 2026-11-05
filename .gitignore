@@ -1,0 +1,13 @@
+# Proprietary export and patient-level intermediate files
+2025_04_15/
+cache_v2*/
+results_v2_debug/
+results_v2_synthetic*/
+
+# Generated synthetic data and runs
+synthetic/rule_based/
+synthetic/run/
+
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
