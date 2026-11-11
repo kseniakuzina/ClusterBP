@@ -15,8 +15,8 @@ To make the code runnable without it, the repository provides:
 
 ## Task and evaluation
 
-* **Targets.** According to the operator's code dictionary, clinically significant events are alerts of the monitoring system (BP and HR "zones", loss of target BP control). **A** — codes 33012, 33901 (BP red zone); **B** — codes 33601, 33801, 33802, 33911 (BP above target). Sensitivity checks: `A_with33902` (heart-rate red zone), `B_with33810` ("signs of reaching target BP"), `B_no33601` (33601 exists only from November 2024), `B_gap0` (no gap). `OLD` is the target of the earlier ClusterBP version, kept for comparison.
-* **Causal setup.** 14-day history windows every 3 days; history windows and events share one timeline (server time); a gap of 1 day (A) and 7 days (B) separates the history window from the 7-day prediction horizon, so the target is not computed from the input measurements.
+* **Targets.** According to the operator's code dictionary, clinically significant events are alerts of the monitoring system (BP and HR "zones", loss of target BP control). **A** — codes 33012, 33901 (BP red zone); **B** — codes 33601, 33801, 33802, 33911 (BP above target). Sensitivity checks: `A_with33902` (heart-rate red zone), `B_with33810` ("signs of reaching target BP"), `B_no33601` (33601 exists only from November 2024), `A_gap1` and `B_gap7` (a gap of 1 and 7 days between the history window and the horizon). `OLD` is the target of the earlier ClusterBP version, kept for comparison.
+* **Causal setup.** 14-day history windows every 3 days; history windows and events share one timeline (server time); the 7-day prediction horizon starts right after the history window, and only events after the prediction time count as targets.
 * **Models.** XGB_full: peaks and variability of BP (ARV), slopes, shares of readings above 140/160/180 mm Hg, DBP, HR, measurement regime, history of events before the prediction time, long-history features over 30/60/90 days. GRU with additive attention over the 20 latest measurements. Fusion: global, per-phenotype (ClusterBP) and stacking. Baselines: maximum SBP in the window, "an event of this type in the last 7 days", logistic regression; ClusterBP v1 (GRU + XGBoost on 6 features) for comparison.
 * **Evaluation.** Patient-level 5-fold CV; early stopping, thresholds and fusion weights tuned on an inner validation split; phenotypes fitted on training patients only and assigned from the past 30 days of each window; metrics at the real event rate; paired patient-level bootstrap 95% CIs.
 
@@ -31,7 +31,7 @@ To make the code runnable without it, the repository provides:
 | `clusterbp_v2_regions.ipynb` | Region-held-out validation |
 | `clusterbp_v2_additional.ipynb` | Cohort, confusion matrices, clinical utility (calibration, alert burden, first episodes, lead time, decision curves), ablations, choice of k, alternative tabular models |
 | `clusterbp_v2_interpret.ipynb` | Interpretability: SHAP, permutation importance, Integrated Gradients, temporal occlusion, sanity checks, physiology |
-| `clusterbp_v2_leakage.ipynb` | Leakage audit: six protocol errors tested as switches on the same data |
+| `clusterbp_v2_leakage.ipynb` | Leakage audit: five protocol errors tested as switches on the same data; main protocol vs a gap between history and horizon |
 | `clusterbp_v2_first_events.ipynb` | Windows with no prior event of the type |
 | `clusterbp_v2_features.ipynb` | Long-history and therapy features |
 | `clusterbp_v2_shift_subgroups.ipynb` | B codes by month, recalibration and retraining strategies, subgroups |
@@ -61,27 +61,28 @@ jupyter nbconvert --to notebook --execute clusterbp_v2.ipynb
 jupyter nbconvert --to notebook --execute clusterbp_v2_leakage.ipynb
 ```
 
-Events: 90001 — minute with mean arterial pressure < 65 mm Hg (hypotension), 90002 — minute with SBP ≥ 160 mm Hg. With `CLUSTERBP_PRESET=vitaldb` all durations are in minutes (14-min history, 3-min stride, 5-min gap, 5-min horizon). The other notebooks use reference files of the proprietary export (regions, therapy) and are not run on VitalDB.
+Events: 90001 — minute with mean arterial pressure < 65 mm Hg (hypotension), 90002 — minute with SBP ≥ 160 mm Hg. With `CLUSTERBP_PRESET=vitaldb` all durations are in minutes (14-min history, 3-min stride, 5-min horizon right after the history window; `OLD` is hypotension after a 5-min gap). The other notebooks use reference files of the proprietary export (regions, therapy) and are not run on VitalDB.
 
 ## Main results
 
-Cross-validation at the real event rate (A — 3.8% of windows, B — 12.2%):
+Cross-validation at the real event rate (A — 3.8% of windows, B — 12.5%):
 
 | Model | A: AUROC | A: AUPRC | B: AUROC | B: AUPRC |
 |:---|:---:|:---:|:---:|:---:|
-| ClusterBP v2 (GRU + XGB_full) | 0.925 | 0.488 | 0.936 | 0.713 |
-| XGB_full | 0.926 | 0.487 | 0.935 | 0.712 |
-| ClusterBP v1 (GRU + XGBoost on 6 features) | 0.912 | 0.438 | 0.920 | 0.663 |
-| Rule: maximum SBP in the window | 0.892 | 0.312 | 0.787 | 0.352 |
+| ClusterBP v2 (GRU + XGB_full) | 0.934 | 0.541 | 0.965 | 0.853 |
+| XGB_full | 0.934 | 0.542 | 0.965 | 0.852 |
+| GRU | 0.916 | 0.475 | 0.957 | 0.817 |
+| ClusterBP v1 (GRU + XGBoost on 6 features) | 0.920 | 0.474 | 0.956 | 0.814 |
+| Rule: maximum SBP in the window | 0.900 | 0.332 | 0.810 | 0.398 |
 
-* **Temporal validation** (test from October 2024): ClusterBP v2 reaches AUPRC 0.46 for A and 0.70 for B; 0.33 and 0.63 on new patients.
-* **Region-held-out validation:** AUPRC 0.49 for A and 0.71 for B, the same as in patient-level CV.
+* **Temporal validation** (test from October 2024): ClusterBP v2 reaches AUPRC 0.50 for A and 0.84 for B; 0.37 and 0.84 on new patients.
+* **Region-held-out validation:** AUPRC 0.54 for A and 0.85 for B, the same as in patient-level CV.
 * **Calibration:** ECE ≤ 0.002.
-* **Sensitivity checks:** with the earlier code sets (A with 33902, B with 33810) XGB_full reaches AUPRC 0.45 and 0.69; without the gap B would look much better (AUPRC 0.85), which is leakage, not skill.
-* **First events.** At the main operating threshold the model detects 67% of all type A episodes but only 3% of a patient's first episode. On windows without any prior event of the type, XGB_full reaches AUPRC 0.076 for A (event rate 0.9%; max-SBP rule 0.038) and 0.167 for B (event rate 2.1%; rule 0.050). With a threshold tuned on these windows, it flags 24% (A) and 33% (B) of first events about 5 and 12 days ahead, at 0.03 and 0.08 alerts per patient-week (`results_v2/first_events/`).
-* **Leakage audit** (`results_v2/leakage/`, XGB_full): a balanced 1:1 test inflates AUPRC by 0.44 (A) and 0.22 (B); a random window split by 0.10 and 0.07; omitting the gap by 0.06 and 0.14; fitting phenotypes on all patients or on the full history changes AUPRC by ≤ 0.01; tuning the threshold on test changes Macro F1 by ≤ 0.002. All errors together give AUPRC 0.96 (A) and 0.97 (B) instead of 0.49 and 0.71.
-* **Features:** long-history features (30–90 days) add 0.012 AUPRC for both A and B; therapy features add nothing. Monthly recalibration or retraining does not improve the static model on the temporal test.
-* **VitalDB** (583 operations, 40,631 windows): hypotension (13.4% of windows) — XGB_full AUROC 0.861, AUPRC 0.566; hypertension (4.7%) — AUPRC 0.18–0.23, little above the max-SBP rule (0.159). The leakage audit reproduces the pattern seen on the main data: all protocol errors together give AUPRC 0.95 and 0.94 instead of 0.57 and 0.20.
+* **Sensitivity checks:** with the earlier code sets (A with 33902, B with 33810) XGB_full reaches AUPRC 0.51 and 0.83. With a gap between the history window and the horizon (1 day for A, 7 days for B) AUPRC is 0.49 and 0.71, and the lead over the max-SBP rule stays large (`results_v2/leakage/leakage_gap.csv`).
+* **First events.** At the main operating threshold the model detects 70% of all type A episodes but only 3% of a patient's first episode. On windows without any prior event of the type, XGB_full reaches AUPRC 0.076 for A (event rate 0.8%; max-SBP rule 0.035) and 0.232 for B (event rate 1.6%; rule 0.048). With a threshold tuned on these windows, it flags 26% (A) and 56% (B) of first events about 4 and 3 days ahead, at 0.03 and 0.05 alerts per patient-week (`results_v2/first_events/`).
+* **Leakage audit** (`results_v2/leakage/`, XGB_full): a balanced 1:1 test inflates AUPRC by 0.39 (A) and 0.11 (B); a random window split by 0.08 and 0.02; fitting phenotypes on all patients or on the full history changes AUPRC by ≤ 0.002; tuning the threshold on test changes Macro F1 by ≤ 0.001. All errors together give AUPRC 0.96 (A) and 0.97 (B) instead of 0.54 and 0.85.
+* **Features:** long-history features (30–90 days) add 0.009 AUPRC for A and 0.003 for B; therapy features add nothing. Monthly recalibration or retraining does not improve the static model on the temporal test.
+* **VitalDB** (583 operations, 40,631 windows): hypotension (13.9% of windows) — XGB_full AUROC 0.935, AUPRC 0.776 (max-SBP rule 0.399); hypertension (4.1%) — AUPRC 0.47–0.53 against 0.226 for the rule. The leakage audit reproduces the pattern seen on the main data: all protocol errors together give AUPRC 0.95 and 0.94 instead of 0.78 and 0.51. A 5-min gap before the horizon lowers AUPRC to 0.56 and 0.23, because minute-level pressure is strongly autocorrelated.
 
 ## License
 
